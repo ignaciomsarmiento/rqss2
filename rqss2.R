@@ -3,6 +3,19 @@ rqss2 <- function(x, y, tau = .5, lambda = 1, dual = TRUE, rtol = 1e-06, verb = 
 n <- length(x)
 if(length(y) != n) stop("lengths of x and y don't match")
 
+MakeX <- function(x,y){
+    f <- smooth.spline(x,y)$fit
+    nk <- f$nk
+    X <- matrix(0,length(x), nk)
+    for(i in 1:nk){
+        # Make fake smoothing.spline.fit object
+        f$coef <- rep(0, nk)
+        f$coef[i] <- 1
+        X[,i] <- predict(f,x)$y
+    }
+    X
+}
+
 MakeQR <- function(x) {
 	u <- sort(unique(x))
 	h <- diff(u)
@@ -40,9 +53,13 @@ else{
    QP$bx <- rbind(blx = c(rep(-Inf,2*n-2), rep(0, 2*n)), 
 	          bux = c(rep(Inf,2*n-2), rep(Inf, 2*n)))
    QP$qobj <- list(i = 1:(n-2), j = 1:(n-2), v = rep(lambda,n-2))
+   
    r <- mosek(QP, opts = list(verbose = verb))
+   
    fit <- r$sol$itr$xx[(n-1):(2*n-2)]
 }
 status <- r$sol$itr$solsta
 list(fit = fit, status = status)
 }
+
+
