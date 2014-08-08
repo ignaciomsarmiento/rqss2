@@ -3,6 +3,7 @@ rqss2 <- function(x, y, tau = .5, lambda = 1, dual = TRUE, rtol = 1e-06, verb = 
 n <- length(x)
 if(length(y) != n) stop("lengths of x and y don't match")
 
+if(length(n)>50){
 MakeX <- function(x,y){
     f <- smooth.spline(x,y)$fit
     nk <- f$nk
@@ -16,7 +17,8 @@ MakeX <- function(x,y){
     X
 }
 
-MakeQR <- function(x) {
+
+MakeQR <- function(quantile(x,smooth.spline(x,y)$fit$knot)) {
 	u <- sort(unique(x))
 	h <- diff(u)
 	n <- length(h)
@@ -26,6 +28,22 @@ MakeQR <- function(x) {
 	}
 G <- MakeQR(x)
 T <- backsolve(chol(G$R), Diagonal(n-2)) %*% t(G$Q)
+}
+
+else{
+MakeQR <- function(x) {
+        u <- sort(unique(x))
+        h <- diff(u)
+        n <- length(h)
+        R <- bandSparse(n-1, n-1, -1:1, list(h[-1]/3, c(2*(h[-1] + h[-n])/3, 0), h[-1]/3))
+        Q <- bandSparse(n+1,n-1, -2:0, list(1/h[-1], c(-(1/h[-1] + 1/h[-n]), 0), 1/h[-n]))
+        list(Q = Q, R = R)
+    }
+    G <- MakeQR(x)
+    T <- backsolve(chol(G$R), Diagonal(n-2)) %*% t(G$Q)
+}
+    
+}
 
 #  Now formulate a Mosek problem to finish the job...
 
